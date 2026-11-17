@@ -1,3 +1,4 @@
+import { cachedFetch } from '../utils/asyncPatterns';
 /**
  * TODO: Implement a service that coordinates multiple API calls
  *
@@ -9,39 +10,35 @@
  */
 
 export async function fetchDashboardData(city) {
-  // TODO: Replace sequential fetching with parallel fetching
-  // using Promise.allSettled
+  const endpoints = {
+    weather: `http://localhost:3001/weather?city=${city}`,
+    forecast: `http://localhost:3001/forecast?city=${city}`,
+    news: `http://localhost:3001/news?city=${city}`,
+    alerts: `http://localhost:3001/alerts?city=${city}`
+  };
+
+  const names = Object.keys(endpoints);
+
+  const promises = names.map(name =>
+    cachedFetch(endpoints[name])
+  );
+
+  const results = await Promise.allSettled(promises);
 
   const dashboardData = {};
 
-  // Current implementation: Sequential (slow!)
-  try {
-    const weatherResponse = await fetch(`http://localhost:3001/weather?city=${city}`);
-    dashboardData.weather = await weatherResponse.json();
-  } catch (error) {
-    dashboardData.weather = { error: true };
-  }
+  results.forEach((result, index) => {
+    const name = names[index];
 
-  try {
-    const forecastResponse = await fetch(`http://localhost:3001/forecast?city=${city}`);
-    dashboardData.forecast = await forecastResponse.json();
-  } catch (error) {
-    dashboardData.forecast = { error: true };
-  }
-
-  try {
-    const newsResponse = await fetch(`http://localhost:3001/news?city=${city}`);
-    dashboardData.news = await newsResponse.json();
-  } catch (error) {
-    dashboardData.news = { error: true };
-  }
-
-  try {
-    const alertsResponse = await fetch(`http://localhost:3001/alerts?city=${city}`);
-    dashboardData.alerts = await alertsResponse.json();
-  } catch (error) {
-    dashboardData.alerts = { error: true };
-  }
+    if (result.status === 'fulfilled') {
+      dashboardData[name] = result.value;
+    } else {
+      dashboardData[name] = {
+        error: true,
+        message: result.reason.message
+      };
+    }
+  });
 
   return dashboardData;
 }
