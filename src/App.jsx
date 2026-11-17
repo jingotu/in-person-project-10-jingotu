@@ -5,7 +5,7 @@ import NewsCard from './components/NewsCard';
 import AlertsCard from './components/AlertsCard';
 import SearchBar from './components/SearchBar';
 import StatusBar from './components/StatusBar';
-import { fetchWithRetry } from './utils/asyncPatterns';
+import { cachedFetch } from './utils/asyncPatterns';
 
 // PROBLEM: This basic fetch has no retry, no caching, no error handling
 async function basicFetch(url) {
@@ -43,10 +43,9 @@ function App() {
     setErrors(prev => ({ ...prev, weather: null }));
 
     try {
-      const response = await fetchWithRetry(
+      const data = await cachedFetch(
         `http://localhost:3001/weather?city=${cityName}`
       );
-      const data = await response.json();
       setDashboardData(prev => ({ ...prev, weather: data }));
     } catch (error) {
       setErrors(prev => ({ ...prev, weather: error.message }));
@@ -64,7 +63,9 @@ function App() {
     // Fetch forecast
     setLoading(prev => ({ ...prev, forecast: true }));
     try {
-      const data = await basicFetch(`http://localhost:3001/forecast?city=${cityName}`);
+      const data = await cachedFetch(
+        `http://localhost:3001/forecast?city=${cityName}`
+      );
       setDashboardData(prev => ({ ...prev, forecast: data }));
     } catch (error) {
       setErrors(prev => ({ ...prev, forecast: error.message }));
@@ -75,7 +76,9 @@ function App() {
     // Fetch news
     setLoading(prev => ({ ...prev, news: true }));
     try {
-      const data = await basicFetch(`http://localhost:3001/news?city=${cityName}`);
+      const data = await cachedFetch(
+        `http://localhost:3001/news?city=${cityName}`
+      );
       setDashboardData(prev => ({ ...prev, news: data }));
     } catch (error) {
       setErrors(prev => ({ ...prev, news: error.message }));
@@ -86,7 +89,9 @@ function App() {
     // Fetch alerts
     setLoading(prev => ({ ...prev, alerts: true }));
     try {
-      const data = await basicFetch(`http://localhost:3001/alerts?city=${cityName}`);
+      const data = await cachedFetch(
+        `http://localhost:3001/alerts?city=${cityName}`
+      );
       setDashboardData(prev => ({ ...prev, alerts: data }));
     } catch (error) {
       setErrors(prev => ({ ...prev, alerts: error.message }));

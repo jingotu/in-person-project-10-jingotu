@@ -61,23 +61,39 @@ export async function fetchWithRetry(url, options = {}, maxRetries = 3) {
  * 3. Provide get, set, and clear methods
  */
 class RequestCache {
-  constructor(ttl = 60000) {
-    // TODO: Initialize cache storage and TTL
+  constructor(ttl = 15000) {
+    this.cache = new Map();
+    this.ttl = ttl;
   }
 
   set(key, value) {
-    // TODO: Store value with timestamp
+    this.cache.set(key, {
+      value: value,
+      timestamp: Date.now()
+    });
   }
 
   get(key) {
-    // TODO: Return value if not expired, null otherwise
-    return null;
+    const entry = this.cache.get(key);
+
+    if (!entry) {
+      return null;
+    }
+
+    if (Date.now() - entry.timestamp >= this.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.value;
   }
 
   clear() {
-    // TODO: Clear all cache entries
+    this.cache.clear();
   }
 }
+const requestCache = new RequestCache(15000);
+const pendingCachedRequests = new Map();
 
 /**
  * TODO: Implement cachedFetch
@@ -93,10 +109,34 @@ class RequestCache {
  * @returns {Promise<any>} - Parsed JSON response
  */
 export async function cachedFetch(url, options = {}) {
-  // TODO: Implement caching and deduplication
-  // For now, just do a basic fetch
-  const response = await fetch(url, options);
-  return response.json();
+  const cached = requestCache.get(url);
+
+  if (cached !== null) {
+    console.log(`Cache hit: ${url}`);
+    return cached;
+  }
+
+  if (pendingCachedRequests.has(url)) {
+    console.log(`Request deduped: ${url}`);
+    return pendingCachedRequests.get(url);
+  }
+
+  const requestPromise = (async () => {
+    const response = await fetchWithRetry(url, options);
+    const data = await response.json();
+
+    requestCache.set(url, data);
+
+    return data;
+  })();
+
+  pendingCachedRequests.set(url, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    pendingCachedRequests.delete(url);
+  }
 }
 
 /**
