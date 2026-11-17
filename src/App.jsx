@@ -5,6 +5,7 @@ import NewsCard from './components/NewsCard';
 import AlertsCard from './components/AlertsCard';
 import SearchBar from './components/SearchBar';
 import StatusBar from './components/StatusBar';
+import { fetchWithRetry } from './utils/asyncPatterns';
 
 // PROBLEM: This basic fetch has no retry, no caching, no error handling
 async function basicFetch(url) {
@@ -42,7 +43,10 @@ function App() {
     setErrors(prev => ({ ...prev, weather: null }));
 
     try {
-      const data = await basicFetch(`http://localhost:3001/weather?city=${cityName}`);
+      const response = await fetchWithRetry(
+        `http://localhost:3001/weather?city=${cityName}`
+      );
+      const data = await response.json();
       setDashboardData(prev => ({ ...prev, weather: data }));
     } catch (error) {
       setErrors(prev => ({ ...prev, weather: error.message }));
